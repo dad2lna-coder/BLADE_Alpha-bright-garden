@@ -5,23 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Refresh preview from source branch a few times a day
     - cron: "0 0,6,12,18 * * *"
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout BLADE_Alpha bright-garden
@@ -33,32 +27,23 @@ jobs:
 
       - name: Build static preview
         run: |
+          set -euo pipefail
           mkdir -p site
           cd src
-          # Copy the offline web app only (skip Tauri / workflows / scripts)
-          cp -a index.html site_tmp 2>/dev/null || true
-          mkdir -p ../site
           cp -a index.html ../site/
           for d in css js lib modules airport; do
             if [ -d "$d" ]; then cp -a "$d" ../site/; fi
           done
-          for f in README.md INSTRUCTIONS.md TEAM-SETUP.md package.json; do
-            if [ -f "$f" ]; then cp -a "$f" ../site/; fi
-          done
-          # Marker so testers know this is the branch preview
           printf '%s\n' 'bright-garden' > ../site/PREVIEW_BRANCH.txt
-          # GitHub Pages should not run Jekyll on this static app
           touch ../site/.nojekyll
           ls -la ../site
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish to gh-pages on this repo only
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com

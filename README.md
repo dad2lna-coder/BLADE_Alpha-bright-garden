@@ -1,31 +1,22 @@
-# BLADE_Alpha — bright-garden test environment
+# BLADE_Alpha — bright-garden (own Pages site)
 
-Preview GitHub Pages site for the `bright-garden` branch of [`dad2lna-coder/BLADE_Alpha`](https://github.com/dad2lna-coder/BLADE_Alpha/tree/bright-garden).
+Separate GitHub Pages site for [`BLADE_Alpha` / `bright-garden`](https://github.com/dad2lna-coder/BLADE_Alpha/tree/bright-garden).
+Does not change `BLADE_Alpha` `main`.
 
-## Live preview
+## Own URL
 
-**https://dad2lna-coder.github.io/BLADE_Alpha-bright-garden/**
+https://dad2lna-coder.github.io/BLADE_Alpha-bright-garden/
 
-Production (`main`) stays at **https://dad2lna-coder.github.io/BLADE_Alpha/**
+## Enable Pages on THIS repo (one time)
 
-## How this works
+1. Open https://github.com/dad2lna-coder/BLADE_Alpha-bright-garden/settings/pages
+2. Source: **Deploy from a branch**
+3. Branch: **gh-pages**
+4. Folder: **/ (root)**
+5. Save
 
-This repo does not hold the app source. On every push to `main` here, on manual *Run workflow*, and on a 6-hour schedule, Actions:
+Then run [Deploy bright-garden Pages](https://github.com/dad2lna-coder/BLADE_Alpha-bright-garden/actions/workflows/deploy-pages.yml) if the site is empty.
 
-1. Checks out `dad2lna-coder/BLADE_Alpha` @ `bright-garden`
-2. Copies the static web app (`index.html`, `css/`, `js/`, `lib/`, `modules/`, `airport/`)
-3. Deploys it to this repo's GitHub Pages site
+## Refresh
 
-## Refresh after source changes
-
-After you push to `bright-garden`:
-
-1. Open [Actions → Deploy bright-garden Pages](https://github.com/dad2lna-coder/BLADE_Alpha-bright-garden/actions/workflows/deploy-pages.yml)
-2. Click **Run workflow**
-
-Or wait for the scheduled refresh.
-
-## First-time Pages note
-
-If the first deploy fails with a Pages environment error, open
-**Settings → Pages** on this repo and set Source to **GitHub Actions**, then re-run the workflow.
+Actions here pulls latest `bright-garden` from `BLADE_Alpha` and publishes it to this repo's `gh-pages` branch.
