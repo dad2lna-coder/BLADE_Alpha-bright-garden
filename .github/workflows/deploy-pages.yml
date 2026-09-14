@@ -1,28 +1,28 @@
 name: Deploy bright-garden Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
   repository_dispatch:
     types: [bright-garden-push]
   schedule:
-    # Fallback if no token is set on BLADE_Alpha
     - cron: "*/15 * * * *"
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-sync
   cancel-in-progress: true
 
 jobs:
-  publish:
+  sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout this Pages repo
+        uses: actions/checkout@v4
+        with:
+          path: dest
+
       - name: Checkout BLADE_Alpha bright-garden
         uses: actions/checkout@v4
         with:
@@ -30,39 +30,28 @@ jobs:
           ref: bright-garden
           path: src
 
-      - name: Build static preview
+      - name: Copy app onto this repo main
         run: |
           set -euo pipefail
-          mkdir -p site
-          cd src
-          cp -a index.html ../site/
+          cd dest
+          rm -rf css js lib modules airport index.html .nojekyll PREVIEW_BRANCH.txt
+          cp -a ../src/index.html .
           for d in css js lib modules airport; do
-            if [ -d "$d" ]; then cp -a "$d" ../site/; fi
+            if [ -d "../src/$d" ]; then cp -a "../src/$d" .; fi
           done
-          printf '%s\n' 'bright-garden' > ../site/PREVIEW_BRANCH.txt
-          touch ../site/.nojekyll
+          touch .nojekyll
+          printf '%s\n' 'bright-garden' > PREVIEW_BRANCH.txt
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: github-actions[bot]
-          user_email: 41898282+github-actions[bot]@users.noreply.github.com
-
-      - name: Configure Pages
-        continue-on-error: true
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        continue-on-error: true
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        continue-on-error: true
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit and push
+        working-directory: dest
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Sync from BLADE_Alpha bright-garden"
+          git push origin HEAD:main
