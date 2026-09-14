@@ -4,11 +4,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  repository_dispatch:
+    types: [bright-garden-push]
   schedule:
-    - cron: "0 0,6,12,18 * * *"
+    # Fallback if no token is set on BLADE_Alpha
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -36,9 +41,8 @@ jobs:
           done
           printf '%s\n' 'bright-garden' > ../site/PREVIEW_BRANCH.txt
           touch ../site/.nojekyll
-          ls -la ../site
 
-      - name: Publish to gh-pages on this repo only
+      - name: Publish to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -47,3 +51,18 @@ jobs:
           force_orphan: true
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Configure Pages
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        continue-on-error: true
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        continue-on-error: true
+        id: deployment
+        uses: actions/deploy-pages@v4
