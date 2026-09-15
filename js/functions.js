@@ -13,22 +13,46 @@ window.Scheduler = window.Scheduler || {};
   function setChk(id, v) { var el = S.$(id); if (el) el.checked = !!v; }
   function readNum(id) { var el = S.$(id); return el ? num0(el.value) : null; }
 
+  var POOL_KEYS = [
+    "poolStsoBagM", "poolStsoBagF", "poolLtsoBagM", "poolLtsoBagF", "poolTsoBagM", "poolTsoBagF",
+    "poolStsoDfoM", "poolStsoDfoF", "poolLtsoDfoM", "poolLtsoDfoF", "poolTsoDfoM", "poolTsoDfoF"
+  ];
+  function bagPoolTotal(fc) {
+    return num0(fc.poolStsoBagM) + num0(fc.poolStsoBagF) + num0(fc.poolLtsoBagM) + num0(fc.poolLtsoBagF) +
+      num0(fc.poolTsoBagM) + num0(fc.poolTsoBagF);
+  }
+  function dfoPoolTotal(fc) {
+    return num0(fc.poolStsoDfoM) + num0(fc.poolStsoDfoF) + num0(fc.poolLtsoDfoM) + num0(fc.poolLtsoDfoF) +
+      num0(fc.poolTsoDfoM) + num0(fc.poolTsoDfoF);
+  }
+  function syncDerivedMode(fc) {
+    var bag = bagPoolTotal(fc) > 0, dfo = dfoPoolTotal(fc) > 0;
+    fc.poolBag = bagPoolTotal(fc);
+    fc.poolStsoDfo = num0(fc.poolStsoDfoM) + num0(fc.poolStsoDfoF);
+    fc.poolLtsoDfo = num0(fc.poolLtsoDfoM) + num0(fc.poolLtsoDfoF);
+    fc.poolTsoDfo = num0(fc.poolTsoDfoM) + num0(fc.poolTsoDfoF);
+    fc.mode = bag && dfo ? "both" : bag ? "bag" : dfo ? "dfo" : "none";
+    return fc.mode;
+  }
+  S.fteCapsByRoleSex = function () {
+    var st = S.state || {};
+    return {
+      STSO: { M: num0(st.stsoM), F: num0(st.stsoF) },
+      LTSO: { M: num0(st.ltsoM), F: num0(st.ltsoF) },
+      TSO: { M: num0(st.ftM) + num0(st.ptM), F: num0(st.ftF) + num0(st.ptF) }
+    };
+  };
   S.ensureFunctionCoverage = function () {
     if (!S.state.functionCoverage) S.state.functionCoverage = {};
     var fc = S.state.functionCoverage;
-    if (fc.mode !== "dfo" && fc.mode !== "bag" && fc.mode !== "none") {
-      if (fc.enableBag && !fc.enableDfo) fc.mode = "bag";
-      else if (fc.enableDfo && !fc.enableBag) fc.mode = "dfo";
-      else fc.mode = "none";
-    }
     ["poolStsoDfoM","poolStsoDfoF","poolLtsoDfoM","poolLtsoDfoF","poolTsoDfoM","poolTsoDfoF",
      "poolStsoBagM","poolStsoBagF","poolLtsoBagM","poolLtsoBagF","poolTsoBagM","poolTsoBagF"].forEach(function (k) {
       if (fc[k] == null) fc[k] = 0;
     });
-    if (fc.poolStsoDfo == null) fc.poolStsoDfo = fc.poolStsoDfoM + fc.poolStsoDfoF;
-    if (fc.poolLtsoDfo == null) fc.poolLtsoDfo = fc.poolLtsoDfoM + fc.poolLtsoDfoF;
-    if (fc.poolTsoDfo == null) fc.poolTsoDfo = fc.poolTsoDfoM + fc.poolTsoDfoF;
-    if (fc.poolBag == null) fc.poolBag = fc.poolTsoBagM + fc.poolTsoBagF;
+    if (fc.poolStsoDfo == null) fc.poolStsoDfo = num0(fc.poolStsoDfoM) + num0(fc.poolStsoDfoF);
+    if (fc.poolLtsoDfo == null) fc.poolLtsoDfo = num0(fc.poolLtsoDfoM) + num0(fc.poolLtsoDfoF);
+    if (fc.poolTsoDfo == null) fc.poolTsoDfo = num0(fc.poolTsoDfoM) + num0(fc.poolTsoDfoF);
+    if (fc.poolBag == null) fc.poolBag = bagPoolTotal(fc);
     if (!fc.poolStsoDfoM && !fc.poolStsoDfoF && fc.poolStsoDfo) fc.poolStsoDfoM = fc.poolStsoDfo;
     if (!fc.poolLtsoDfoM && !fc.poolLtsoDfoF && fc.poolLtsoDfo) fc.poolLtsoDfoM = fc.poolLtsoDfo;
     if (!fc.poolTsoDfoM && !fc.poolTsoDfoF && fc.poolTsoDfo) fc.poolTsoDfoM = fc.poolTsoDfo;
@@ -38,30 +62,26 @@ window.Scheduler = window.Scheduler || {};
     if (!Array.isArray(fc.bands) || !fc.bands.length) fc.bands = defaultBands();
     delete fc.stsoIsDfo; delete fc.poolDfo; delete fc.poolPax;
     if (!S.state.functionRotation) S.state.functionRotation = {};
+    syncDerivedMode(fc);
     return fc;
   };
 
   S.getFunctionMode = function () {
-    var fc = S.ensureFunctionCoverage();
-    return fc.mode === "dfo" || fc.mode === "bag" ? fc.mode : "none";
+    return syncDerivedMode(S.ensureFunctionCoverage());
   };
 
   S.syncFunctionModeUi = function () {
     var fc = S.ensureFunctionCoverage();
-    var mode = S.getFunctionMode();
-    setChk("fc-mode-dfo", mode === "dfo");
-    setChk("fc-mode-bag", mode === "bag");
+    setVal("fc-pool-bag-stso-m", fc.poolStsoBagM); setVal("fc-pool-bag-stso-f", fc.poolStsoBagF);
+    setVal("fc-pool-bag-ltso-m", fc.poolLtsoBagM); setVal("fc-pool-bag-ltso-f", fc.poolLtsoBagF);
+    setVal("fc-pool-bag-tso-m", fc.poolTsoBagM); setVal("fc-pool-bag-tso-f", fc.poolTsoBagF);
+    setVal("fc-pool-dfo-stso-m", fc.poolStsoDfoM); setVal("fc-pool-dfo-stso-f", fc.poolStsoDfoF);
+    setVal("fc-pool-dfo-ltso-m", fc.poolLtsoDfoM); setVal("fc-pool-dfo-ltso-f", fc.poolLtsoDfoF);
+    setVal("fc-pool-dfo-tso-m", fc.poolTsoDfoM); setVal("fc-pool-dfo-tso-f", fc.poolTsoDfoF);
     var wrap = S.$("fc-bands-wrap");
     var add = S.$("fc-add-band");
-    var hideBands = mode === "bag";
-    if (wrap) wrap.style.display = hideBands ? "none" : "";
-    if (add) add.style.display = hideBands ? "none" : "";
-    var pools = mode === "bag"
-      ? { sm: fc.poolStsoBagM, sf: fc.poolStsoBagF, lm: fc.poolLtsoBagM, lf: fc.poolLtsoBagF, tm: fc.poolTsoBagM, tf: fc.poolTsoBagF }
-      : { sm: fc.poolStsoDfoM, sf: fc.poolStsoDfoF, lm: fc.poolLtsoDfoM, lf: fc.poolLtsoDfoF, tm: fc.poolTsoDfoM, tf: fc.poolTsoDfoF };
-    setVal("fc-pool-stso-m", pools.sm); setVal("fc-pool-stso-f", pools.sf);
-    setVal("fc-pool-ltso-m", pools.lm); setVal("fc-pool-ltso-f", pools.lf);
-    setVal("fc-pool-tso-m", pools.tm); setVal("fc-pool-tso-f", pools.tf);
+    if (wrap) wrap.style.display = "";
+    if (add) add.style.display = "";
   };
 
   S.fillFunctionCoverageForm = function () {
@@ -69,6 +89,7 @@ window.Scheduler = window.Scheduler || {};
     setVal("fc-phase-thr", fc.phaseThresholdMin); setChk("fc-ampm-split", fc.amPmSplit);
     S.syncFunctionModeUi();
     S.renderFunctionBandsTable(); S.updateFunctionCoveragePreview();
+    if (S.renderExtraPositions) S.renderExtraPositions();
   };
 
   S.computeShiftAnchors = S.computeShiftAnchors || function () {
@@ -101,14 +122,29 @@ window.Scheduler = window.Scheduler || {};
   };
   S.lineStartMin = function (line) { var sh = S.getShift(line.shiftId); return sh ? S.timeToMin(sh.start) : 0; };
   S.lineRoleKey = function (line) {
+    if (!line) return "TSO";
+    if (line.isExtra || line.extraPositionId) return line.empClass || line.position || "EXTRA";
     if (line.isStso || line.empClass === "STSO") return "STSO";
     if (line.isLtso || line.empClass === "LTSO") return "LTSO";
     return "TSO";
   };
+  S.isOpsFunctionRole = function (line) {
+    var role = S.lineRoleKey(line);
+    return role === "STSO" || role === "LTSO" || role === "TSO";
+  };
+  S.lineIsDfoTagged = function (line) {
+    if (!line) return false;
+    if (line.isExtra || line.extraPositionId) return false;
+    return line.function === "DFO" || !!(line.functionEligible && line.functionEligible.dfo);
+  };
   S.getRotationDuty = function (lineId, dayIndex) {
     var rot = S.state.functionRotation || {};
     var row = rot[String(lineId)] || rot[lineId];
-    if (row && row[dayIndex] != null && row[dayIndex] !== "") return row[dayIndex];
+    if (row) {
+      var cell = row[dayIndex];
+      if (cell == null || cell === "") return null;
+      return cell;
+    }
     var line = null;
     if (S.state && Array.isArray(S.state.lines)) {
       for (var i = 0; i < S.state.lines.length; i++) {
@@ -163,28 +199,14 @@ window.Scheduler = window.Scheduler || {};
   };
   S.readFunctionBandsFromDom = function () {
     var fc = S.ensureFunctionCoverage();
-    var dfoEl = S.$("fc-mode-dfo"), bagEl = S.$("fc-mode-bag");
-    if (dfoEl || bagEl) {
-      if (bagEl && bagEl.checked && !(dfoEl && dfoEl.checked)) fc.mode = "bag";
-      else if (dfoEl && dfoEl.checked) fc.mode = "dfo";
-      else fc.mode = "none";
-    }
-    var sm = readNum("fc-pool-stso-m"), sf = readNum("fc-pool-stso-f");
-    var lm = readNum("fc-pool-ltso-m"), lf = readNum("fc-pool-ltso-f");
-    var tm = readNum("fc-pool-tso-m"), tf = readNum("fc-pool-tso-f");
-    if (fc.mode === "bag") {
-      if (sm != null) fc.poolStsoBagM = sm; if (sf != null) fc.poolStsoBagF = sf;
-      if (lm != null) fc.poolLtsoBagM = lm; if (lf != null) fc.poolLtsoBagF = lf;
-      if (tm != null) fc.poolTsoBagM = tm; if (tf != null) fc.poolTsoBagF = tf;
-      fc.poolBag = fc.poolTsoBagM + fc.poolTsoBagF + fc.poolStsoBagM + fc.poolStsoBagF + fc.poolLtsoBagM + fc.poolLtsoBagF;
-    } else {
-      if (sm != null) fc.poolStsoDfoM = sm; if (sf != null) fc.poolStsoDfoF = sf;
-      if (lm != null) fc.poolLtsoDfoM = lm; if (lf != null) fc.poolLtsoDfoF = lf;
-      if (tm != null) fc.poolTsoDfoM = tm; if (tf != null) fc.poolTsoDfoF = tf;
-      fc.poolStsoDfo = fc.poolStsoDfoM + fc.poolStsoDfoF;
-      fc.poolLtsoDfo = fc.poolLtsoDfoM + fc.poolLtsoDfoF;
-      fc.poolTsoDfo = fc.poolTsoDfoM + fc.poolTsoDfoF;
-    }
+    function take(id, key) { var n = readNum(id); if (n != null) fc[key] = n; }
+    take("fc-pool-bag-stso-m", "poolStsoBagM"); take("fc-pool-bag-stso-f", "poolStsoBagF");
+    take("fc-pool-bag-ltso-m", "poolLtsoBagM"); take("fc-pool-bag-ltso-f", "poolLtsoBagF");
+    take("fc-pool-bag-tso-m", "poolTsoBagM"); take("fc-pool-bag-tso-f", "poolTsoBagF");
+    take("fc-pool-dfo-stso-m", "poolStsoDfoM"); take("fc-pool-dfo-stso-f", "poolStsoDfoF");
+    take("fc-pool-dfo-ltso-m", "poolLtsoDfoM"); take("fc-pool-dfo-ltso-f", "poolLtsoDfoF");
+    take("fc-pool-dfo-tso-m", "poolTsoDfoM"); take("fc-pool-dfo-tso-f", "poolTsoDfoF");
+    syncDerivedMode(fc);
     var thr = S.$("fc-phase-thr"), split = S.$("fc-ampm-split");
     if (thr) fc.phaseThresholdMin = num0(thr.value || 15);
     if (split) fc.amPmSplit = !!split.checked;
@@ -203,32 +225,68 @@ window.Scheduler = window.Scheduler || {};
   };
   S.updateFunctionCoveragePreview = function () {
     var el = S.$("fc-preview"); if (!el) return;
-    var fc = S.ensureFunctionCoverage(), mode = S.getFunctionMode();
+    var fc = S.ensureFunctionCoverage();
     var anchors = S.computeShiftAnchors();
-    var bandTxt = mode === "bag" ? "bands hidden (BAG)" : (fc.bands || []).map(function (b) {
-      return (b.start || "?") + "-" + (b.end || "?") + " need " + (b.stso || 0) + "-" + (b.ltso || 0) + "-" + (b.tso || 0);
+    var bandTxt = (fc.bands || []).map(function (b) {
+      return (b.start || "?") + "-" + (b.end || "?") + " bag-need " + (b.stso || 0) + "-" + (b.ltso || 0) + "-" + (b.tso || 0);
     }).join(" | ");
-    el.textContent = "Mode " + mode.toUpperCase() +
-      " · STSO M/F " + (mode === "bag" ? fc.poolStsoBagM : fc.poolStsoDfoM) + "/" + (mode === "bag" ? fc.poolStsoBagF : fc.poolStsoDfoF) +
-      " LTSO " + (mode === "bag" ? fc.poolLtsoBagM : fc.poolLtsoDfoM) + "/" + (mode === "bag" ? fc.poolLtsoBagF : fc.poolLtsoDfoF) +
-      " TSO " + (mode === "bag" ? fc.poolTsoBagM : fc.poolTsoDfoM) + "/" + (mode === "bag" ? fc.poolTsoBagF : fc.poolTsoDfoF) +
-      " AM " + S.slotLabel(anchors.am) + " PM " + S.slotLabel(anchors.pm) + " " + (bandTxt || "no bands");
+    el.textContent = "BAG STSO " + fc.poolStsoBagM + "/" + fc.poolStsoBagF +
+      " LTSO " + fc.poolLtsoBagM + "/" + fc.poolLtsoBagF +
+      " TSO " + fc.poolTsoBagM + "/" + fc.poolTsoBagF +
+      " \u00b7 DFO STSO " + fc.poolStsoDfoM + "/" + fc.poolStsoDfoF +
+      " LTSO " + fc.poolLtsoDfoM + "/" + fc.poolLtsoDfoF +
+      " TSO " + fc.poolTsoDfoM + "/" + fc.poolTsoDfoF +
+      " \u00b7 AM " + S.slotLabel(anchors.am) + " PM " + S.slotLabel(anchors.pm) + " " + (bandTxt || "no bands");
   };
   function ensureEligible(line) {
     if (!line.functionEligible || typeof line.functionEligible !== "object") line.functionEligible = { dfo: false, bag: false, pax: false };
     return line.functionEligible;
   }
-  S.buildCertifiedPools = function (fc) {
-    S.state.lines.forEach(function (l) { l.functionEligible = { dfo: false, bag: false, pax: false }; l.function = ""; });
-    var anchors = S.computeShiftAnchors(), thr = fc.phaseThresholdMin || 15;
-    var mode = fc.mode === "bag" ? "bag" : "dfo";
-    var key = mode === "bag" ? "bag" : "dfo";
-    function byRoleSex(role, sex) {
-      return S.state.lines.filter(function (l) { return S.lineRoleKey(l) === role && l.sex === sex; });
+  S.capFunctionPoolsToFte = function (fc, issues) {
+    fc = fc || S.ensureFunctionCoverage();
+    var caps = S.fteCapsByRoleSex();
+    function capPair(role, bagMKey, bagFKey, dfoMKey, dfoFKey) {
+      var capM = caps[role].M, capF = caps[role].F;
+      var reqBagM = num0(fc[bagMKey]), reqBagF = num0(fc[bagFKey]);
+      var reqDfoM = num0(fc[dfoMKey]), reqDfoF = num0(fc[dfoFKey]);
+      if (reqBagM > capM) { if (issues) issues.push("BAG " + role + " M pool " + reqBagM + " exceeds FTE " + capM + " \u2014 capped."); reqBagM = capM; }
+      if (reqBagF > capF) { if (issues) issues.push("BAG " + role + " F pool " + reqBagF + " exceeds FTE " + capF + " \u2014 capped."); reqBagF = capF; }
+      var remM = Math.max(0, capM - reqBagM), remF = Math.max(0, capF - reqBagF);
+      if (reqDfoM > remM) { if (issues) issues.push("DFO " + role + " M pool " + reqDfoM + " exceeds remaining FTE " + remM + " after BAG \u2014 capped."); reqDfoM = remM; }
+      if (reqDfoF > remF) { if (issues) issues.push("DFO " + role + " F pool " + reqDfoF + " exceeds remaining FTE " + remF + " after BAG \u2014 capped."); reqDfoF = remF; }
+      fc[bagMKey] = reqBagM; fc[bagFKey] = reqBagF; fc[dfoMKey] = reqDfoM; fc[dfoFKey] = reqDfoF;
     }
-    function markPool(role, sex, n, markKey) {
+    capPair("STSO", "poolStsoBagM", "poolStsoBagF", "poolStsoDfoM", "poolStsoDfoF");
+    capPair("LTSO", "poolLtsoBagM", "poolLtsoBagF", "poolLtsoDfoM", "poolLtsoDfoF");
+    capPair("TSO", "poolTsoBagM", "poolTsoBagF", "poolTsoDfoM", "poolTsoDfoF");
+    syncDerivedMode(fc);
+    return fc;
+  };
+
+  S.buildCertifiedPools = function (fc) {
+    S.state.lines.forEach(function (l) {
+      if (l.isExtra || l.extraPositionId) return;
+      l.functionEligible = { dfo: false, bag: false, pax: false }; l.function = "";
+    });
+    var anchors = S.computeShiftAnchors(), thr = fc.phaseThresholdMin || 15;
+    function unused(role, sex) {
+      return S.state.lines.filter(function (l) {
+        if (l.isExtra || l.extraPositionId) return false;
+        var el = ensureEligible(l);
+        return S.lineRoleKey(l) === role && l.sex === sex && !el.bag && !el.dfo;
+      });
+    }
+    function markBag(role, sex, n) {
+      if (!n || n <= 0) return { total: 0 };
+      var lines = unused(role, sex).slice();
+      lines.sort(function (a, b) { return S.lineStartMin(a) - S.lineStartMin(b) || String(a.id).localeCompare(String(b.id)); });
+      var taken = 0;
+      for (var i = 0; i < lines.length && taken < n; i++) { ensureEligible(lines[i]).bag = true; taken++; }
+      return { total: taken };
+    }
+    function markDfo(role, sex, n) {
       if (!n || n <= 0) return { am: 0, pm: 0, total: 0 };
-      var lines = byRoleSex(role, sex).slice();
+      var lines = unused(role, sex).slice();
       lines.sort(function (a, b) { return S.lineStartMin(a) - S.lineStartMin(b) || String(a.id).localeCompare(String(b.id)); });
       var amSide = lines.filter(function (l) { return S.isAmSide(S.lineStartMin(l), anchors, thr); });
       var pmSide = lines.filter(function (l) { return !S.isAmSide(S.lineStartMin(l), anchors, thr); });
@@ -240,32 +298,32 @@ window.Scheduler = window.Scheduler || {};
       function take(arr, count) {
         var taken = 0;
         for (var i = 0; i < arr.length && taken < count; i++) {
-          var el = ensureEligible(arr[i]); if (el[markKey]) continue; el[markKey] = true; taken++;
+          var el = ensureEligible(arr[i]); if (el.bag || el.dfo) continue; el.dfo = true; taken++;
         }
         return taken;
       }
       var gotAm = take(amSide, needAm), gotPm = take(pmSide, needPm), short = n - gotAm - gotPm;
-      if (short > 0) gotPm += take(lines.filter(function (l) { return !ensureEligible(l)[markKey]; }), short);
+      if (short > 0) gotPm += take(unused(role, sex), short);
       return { am: gotAm, pm: gotPm, total: gotAm + gotPm };
     }
-    function both(role, m, f) {
-      var a = markPool(role, "M", m, key), b = markPool(role, "F", f, key);
-      return { am: a.am + b.am, pm: a.pm + b.pm, total: a.total + b.total, m: a.total, f: b.total };
-    }
-    if (mode === "bag") {
-      return {
-        stso: both("STSO", fc.poolStsoBagM, fc.poolStsoBagF),
-        ltso: both("LTSO", fc.poolLtsoBagM, fc.poolLtsoBagF),
-        tso: both("TSO", fc.poolTsoBagM, fc.poolTsoBagF),
-        bag: both("TSO", fc.poolTsoBagM, fc.poolTsoBagF),
-        anchors: anchors
-      };
-    }
+    var bag = {
+      stso: { m: markBag("STSO", "M", fc.poolStsoBagM).total, f: markBag("STSO", "F", fc.poolStsoBagF).total },
+      ltso: { m: markBag("LTSO", "M", fc.poolLtsoBagM).total, f: markBag("LTSO", "F", fc.poolLtsoBagF).total },
+      tso: { m: markBag("TSO", "M", fc.poolTsoBagM).total, f: markBag("TSO", "F", fc.poolTsoBagF).total }
+    };
+    bag.stso.total = bag.stso.m + bag.stso.f;
+    bag.ltso.total = bag.ltso.m + bag.ltso.f;
+    bag.tso.total = bag.tso.m + bag.tso.f;
+    var dfo = {
+      stso: markDfo("STSO", "M", fc.poolStsoDfoM), stsoF: markDfo("STSO", "F", fc.poolStsoDfoF),
+      ltso: markDfo("LTSO", "M", fc.poolLtsoDfoM), ltsoF: markDfo("LTSO", "F", fc.poolLtsoDfoF),
+      tso: markDfo("TSO", "M", fc.poolTsoDfoM), tsoF: markDfo("TSO", "F", fc.poolTsoDfoF)
+    };
     return {
-      stso: both("STSO", fc.poolStsoDfoM, fc.poolStsoDfoF),
-      ltso: both("LTSO", fc.poolLtsoDfoM, fc.poolLtsoDfoF),
-      tso: both("TSO", fc.poolTsoDfoM, fc.poolTsoDfoF),
-      bag: { am: 0, pm: 0, total: 0 },
+      bag: bag,
+      stso: { total: dfo.stso.total + dfo.stsoF.total, am: dfo.stso.am + dfo.stsoF.am, pm: dfo.stso.pm + dfo.stsoF.pm },
+      ltso: { total: dfo.ltso.total + dfo.ltsoF.total, am: dfo.ltso.am + dfo.ltsoF.am, pm: dfo.ltso.pm + dfo.ltsoF.pm },
+      tso: { total: dfo.tso.total + dfo.tsoF.total, am: dfo.tso.am + dfo.tsoF.am, pm: dfo.tso.pm + dfo.tsoF.pm },
       anchors: anchors
     };
   };
@@ -273,28 +331,29 @@ window.Scheduler = window.Scheduler || {};
   function paintAfterAssign() {
     if (S.renderCoverageBars) S.renderCoverageBars();
     if (S.renderReports) S.renderReports();
-    if (S.__USE_SVELTE_LINES) document.dispatchEvent(new CustomEvent("lines:request-render"));
-    else if (S.renderLines) S.renderLines();
+    window.dispatchEvent(new CustomEvent("lines:request-render"));
+    if (!S.__USE_SVELTE_LINES && S.renderLines) S.renderLines();
   }
 
   S.generateFunctionAssignments = function (opts) {
     opts = opts || {};
     var fc = opts.fromGenerate ? S.ensureFunctionCoverage() : S.readFunctionBandsFromDom();
-    var mode = S.getFunctionMode();
+    if (!S.state.issues) S.state.issues = [];
+    S.capFunctionPoolsToFte(fc, S.state.issues);
     S.state.functionRotation = {};
     (S.state.lines || []).forEach(function (l) {
+      if (l.isExtra || l.extraPositionId) return;
       l.function = "";
       l.functionEligible = { dfo: false, bag: false, pax: false };
     });
-    if (mode === "none") {
+    if (!S.state.lines || !S.state.lines.length) {
       paintAfterAssign();
-      if (!opts.fromGenerate && S.updateStatus) S.updateStatus("Function mode off — no duties assigned.");
+      if (!opts.fromGenerate && S.updateStatus) S.updateStatus("Generate lines first.");
       return;
     }
-    if (!S.state.lines || !S.state.lines.length) { if (S.updateStatus) S.updateStatus("Generate lines first."); return; }
     var poolStats = S.buildCertifiedPools(fc);
     var days = (S.state.weekCount || 1) * 7;
-
+    var bagFillCount = {};
     function setDuty(lineId, dayIndex, fn) {
       var key = String(lineId);
       if (!S.state.functionRotation[key]) S.state.functionRotation[key] = [];
@@ -302,40 +361,16 @@ window.Scheduler = window.Scheduler || {};
       S.state.functionRotation[key][dayIndex] = fn;
       return true;
     }
+    function getDuty(lineId, dayIndex) {
+      var row = S.state.functionRotation[String(lineId)];
+      if (!row) return null;
+      var cell = row[dayIndex];
+      if (cell == null || cell === "") return null;
+      return cell;
+    }
     function worksDay(line, d) {
       var sched = S.state.schedule[line.id] || S.state.schedule[String(line.id)] || [];
       return sched[d] === "WORK";
-    }
-
-    if (mode === "bag") {
-      (S.state.lines || []).forEach(function (l) {
-        if (!ensureEligible(l).bag) return;
-        l.function = "BAG";
-        for (var d = 0; d < days; d++) {
-          if (worksDay(l, d)) setDuty(l.id, d, "BAG");
-        }
-      });
-      paintAfterAssign();
-      var msgB = "BAG duties on all WORK days · STSO " + poolStats.stso.total + " LTSO " + poolStats.ltso.total + " TSO " + poolStats.tso.total;
-      var hintB = S.$("cert-assign-hint"); if (hintB) hintB.textContent = msgB;
-      if (!opts.fromGenerate && S.updateStatus) S.updateStatus(msgB);
-      if (!opts.fromGenerate) S.closeFunctionCoverageModal();
-      return;
-    }
-
-    var dutyCount = {};
-    function setDutyDfo(lineId, dayIndex, fn) {
-      var key = String(lineId);
-      if (!S.state.functionRotation[key]) S.state.functionRotation[key] = [];
-      while (S.state.functionRotation[key].length <= dayIndex) S.state.functionRotation[key].push(null);
-      if (S.state.functionRotation[key][dayIndex]) return false;
-      S.state.functionRotation[key][dayIndex] = fn;
-      dutyCount[key] = (dutyCount[key] || 0) + 1;
-      return true;
-    }
-    function getDuty(lineId, dayIndex) {
-      var row = S.state.functionRotation[String(lineId)];
-      return row ? row[dayIndex] || null : null;
     }
     function bandSlots(band) {
       var start = S.timeToMin(band.start), end = S.timeToMin(band.end);
@@ -345,118 +380,199 @@ window.Scheduler = window.Scheduler || {};
       if (!slots.length) slots.push(start % 1440);
       return slots;
     }
-    function fairSort(arr) {
-      return arr.slice().sort(function (a, b) {
-        var ca = dutyCount[String(a.id)] || 0, cb = dutyCount[String(b.id)] || 0;
-        if (ca !== cb) return ca - cb;
-        return S.lineStartMin(a) - S.lineStartMin(b) || String(a.id).localeCompare(String(b.id));
-      });
-    }
-    function countsAtSlot(d, slotMin) {
-      var c = { STSO: 0, LTSO: 0, TSO: 0 };
-      S.state.lines.forEach(function (l) {
-        if (!worksDay(l, d) || !S.lineCoversSlot(l, d, slotMin)) return;
-        var role = S.lineRoleKey(l), duty = getDuty(l.id, d);
-        if (role === "STSO" && duty === "DFO") c.STSO++;
-        else if (role === "LTSO" && duty === "DFO") c.LTSO++;
-        else if (role === "TSO" && duty === "DFO") c.TSO++;
-      });
-      return c;
-    }
-    function wouldOvershootEarlierBands(line, d, currentBandStart) {
-      var role = S.lineRoleKey(line);
-      var bands = fc.bands || [];
-      for (var i = 0; i < bands.length; i++) {
-        var b = bands[i];
-        if (S.timeToMin(b.start) >= currentBandStart) continue;
-        var cap = role === "STSO" ? (b.stso || 0) : role === "LTSO" ? (b.ltso || 0) : (b.tso || 0);
-        var slots = bandSlots(b);
-        for (var s = 0; s < slots.length; s++) {
-          if (!S.lineCoversSlot(line, d, slots[s])) continue;
-          var have = countsAtSlot(d, slots[s]);
-          var n = role === "STSO" ? have.STSO : role === "LTSO" ? have.LTSO : have.TSO;
-          if (n >= cap) return true;
-        }
-      }
+    function coversBand(line, d, band) {
+      var slots = bandSlots(band);
+      for (var i = 0; i < slots.length; i++) if (S.lineCoversSlot(line, d, slots[i])) return true;
       return false;
     }
-    function candOk(l, d, bandStart, allowOvershoot) {
-      if (!ensureEligible(l).dfo) return false;
-      if (getDuty(l.id, d)) return false;
-      if (!allowOvershoot && wouldOvershootEarlierBands(l, d, bandStart)) return false;
-      return true;
+    (S.state.lines || []).forEach(function (l) {
+      if (!ensureEligible(l).bag) return;
+      l.function = "BAG";
+      for (var d = 0; d < days; d++) if (worksDay(l, d)) setDuty(l.id, d, "BAG");
+    });
+    (S.state.lines || []).forEach(function (l) {
+      if (ensureEligible(l).bag) return;
+      if (ensureEligible(l).dfo) l.function = "DFO";
+    });
+    function countBagRole(d, band, role) {
+      var n = 0;
+      (S.state.lines || []).forEach(function (l) {
+        if (S.lineRoleKey(l) !== role) return;
+        if (!worksDay(l, d) || !coversBand(l, d, band)) return;
+        if (getDuty(l.id, d) === "BAG") n++;
+      });
+      return n;
     }
-    function fillBandsForDay(d, allowOvershoot) {
+    function fillBandShortfalls(d) {
       (fc.bands || []).forEach(function (band) {
-        var needS = band.stso || 0, needL = band.ltso || 0, needT = band.tso || 0;
-        if (needS + needL + needT <= 0) return;
-        var slots = bandSlots(band), bandStart = S.timeToMin(band.start), guard = 0, changed = true;
-        while (changed && guard < 200) {
-          changed = false; guard++;
-          for (var si = 0; si < slots.length; si++) {
-            var slotMin = slots[si], have = countsAtSlot(d, slotMin);
-            var defS = Math.max(0, needS - have.STSO), defL = Math.max(0, needL - have.LTSO), defT = Math.max(0, needT - have.TSO);
-            if (defS + defL + defT <= 0) continue;
-            var covering = S.state.lines.filter(function (l) { return worksDay(l, d) && S.lineCoversSlot(l, d, slotMin); });
-            if (defS > 0) {
-              var stsoCands = fairSort(covering.filter(function (l) { return S.lineRoleKey(l) === "STSO" && candOk(l, d, bandStart, allowOvershoot); }));
-              for (var i = 0; i < stsoCands.length && defS > 0; i++) { if (setDutyDfo(stsoCands[i].id, d, "DFO")) { defS--; changed = true; } }
-            }
-            if (defL > 0) {
-              function takeL(arr) { for (var i = 0; i < arr.length && defL > 0; i++) { if (setDutyDfo(arr[i].id, d, "DFO")) { defL--; changed = true; } } }
-              takeL(fairSort(covering.filter(function (l) { return S.lineRoleKey(l) === "LTSO" && candOk(l, d, bandStart, allowOvershoot); })));
-            }
-            if (defT > 0) {
-              function takeT(arr) { for (var i = 0; i < arr.length && defT > 0; i++) { if (setDutyDfo(arr[i].id, d, "DFO")) { defT--; changed = true; } } }
-              takeT(fairSort(covering.filter(function (l) { return S.lineRoleKey(l) === "TSO" && candOk(l, d, bandStart, allowOvershoot); })));
-            }
+        [["STSO", band.stso || 0], ["LTSO", band.ltso || 0], ["TSO", band.tso || 0]].forEach(function (pair) {
+          var role = pair[0], need = pair[1];
+          if (need <= 0) return;
+          var short = need - countBagRole(d, band, role);
+          if (short <= 0) return;
+          var cands = (S.state.lines || []).filter(function (l) {
+            if (!ensureEligible(l).dfo) return false;
+            if (S.lineRoleKey(l) !== role) return false;
+            if (!worksDay(l, d) || !coversBand(l, d, band)) return false;
+            if (getDuty(l.id, d) === "BAG") return false;
+            return true;
+          }).sort(function (a, b) {
+            var ca = bagFillCount[String(a.id)] || 0, cb = bagFillCount[String(b.id)] || 0;
+            if (ca !== cb) return ca - cb;
+            return S.lineStartMin(a) - S.lineStartMin(b) || String(a.id).localeCompare(String(b.id));
+          });
+          for (var i = 0; i < cands.length && short > 0; i++) {
+            setDuty(cands[i].id, d, "BAG");
+            bagFillCount[String(cands[i].id)] = (bagFillCount[String(cands[i].id)] || 0) + 1;
+            short--;
           }
-        }
+        });
       });
     }
-    for (var d = 0; d < days; d++) { fillBandsForDay(d, false); fillBandsForDay(d, true); }
-    (S.state.lines || []).forEach(function (l, li) {
-      if (!ensureEligible(l).dfo) return;
-      l.function = "DFO";
-      var workIdx = 0;
-      for (var di = 0; di < days; di++) {
-        if (!worksDay(l, di)) continue;
-        if (!getDuty(l.id, di)) {
-          var mix = ((workIdx + li) % 2 === 0) ? "DFO" : "PAX";
-          setDutyDfo(l.id, di, mix);
+    for (var d = 0; d < days; d++) fillBandShortfalls(d);
+    (S.state.lines || []).forEach(function (l) {
+      if (l.isExtra || l.extraPositionId) return;
+      if (ensureEligible(l).bag) return;
+      if (ensureEligible(l).dfo) {
+        for (var di = 0; di < days; di++) {
+          if (!worksDay(l, di)) continue;
+          if (!getDuty(l.id, di)) setDuty(l.id, di, "PAX");
         }
-        workIdx++;
+        return;
       }
+      ensureEligible(l).pax = true;
+      l.function = "PAX";
+      for (var dj = 0; dj < days; dj++) if (worksDay(l, dj)) setDuty(l.id, dj, "PAX");
     });
     var shortfalls = [];
     for (var d2 = 0; d2 < Math.min(7, days); d2++) {
       (fc.bands || []).forEach(function (band) {
-        var needS = band.stso || 0, needL = band.ltso || 0, needT = band.tso || 0;
-        if (needS + needL + needT <= 0) return;
-        var worst = { STSO: 99, LTSO: 99, TSO: 99 };
-        bandSlots(band).forEach(function (slotMin) {
-          var c = countsAtSlot(d2, slotMin);
-          if (c.STSO < worst.STSO) worst.STSO = c.STSO;
-          if (c.LTSO < worst.LTSO) worst.LTSO = c.LTSO;
-          if (c.TSO < worst.TSO) worst.TSO = c.TSO;
-        });
         var miss = [];
-        if (worst.STSO < needS) miss.push("STSO " + worst.STSO + "/" + needS);
-        if (worst.LTSO < needL) miss.push("LTSO " + worst.LTSO + "/" + needL);
-        if (worst.TSO < needT) miss.push("TSO " + worst.TSO + "/" + needT);
+        [["STSO", band.stso || 0], ["LTSO", band.ltso || 0], ["TSO", band.tso || 0]].forEach(function (pair) {
+          var role = pair[0], need = pair[1];
+          if (need <= 0) return;
+          var have = countBagRole(d2, band, role);
+          if (have < need) miss.push(role + " " + have + "/" + need);
+        });
         if (miss.length) shortfalls.push((S.DAYS[d2 % 7] || d2) + " " + band.start + "-" + band.end + ": " + miss.join(", "));
       });
     }
-    paintAfterAssign();
-    var msg = "DFO mix · STSO " + poolStats.stso.total + " LTSO " + poolStats.ltso.total + " TSO " + poolStats.tso.total;
     if (shortfalls.length) {
-      msg += " SHORT " + shortfalls.length + " day/band(s)";
-      if (S.state.issues) { shortfalls.slice(0, 10).forEach(function (s) { S.state.issues.push("DFO band: " + s); }); if (S.renderIssues) S.renderIssues(); }
-    } else msg += " all band minimums met";
+      shortfalls.slice(0, 10).forEach(function (msg) { S.state.issues.push("Baggage band short: " + msg); });
+      if (S.renderIssues) S.renderIssues();
+    }
+    paintAfterAssign();
+    var msg = "BAG " + (poolStats.bag.stso.total + poolStats.bag.ltso.total + poolStats.bag.tso.total) +
+      " \u00b7 DFO " + (poolStats.stso.total + poolStats.ltso.total + poolStats.tso.total) + " \u00b7 leftover PAX";
+    if (shortfalls.length) msg += " \u00b7 SHORT " + shortfalls.length + " day/band(s)";
     var hint = S.$("cert-assign-hint"); if (hint) hint.textContent = msg;
     if (!opts.fromGenerate && S.updateStatus) S.updateStatus(msg);
     if (!opts.fromGenerate) S.closeFunctionCoverageModal();
   };
+
+  function defaultExtraBands() {
+    return [{ start: "04:00", end: "20:30", min: 1 }];
+  }
+  S.ensureExtraPositions = function () {
+    if (!Array.isArray(S.state.extraPositions)) S.state.extraPositions = [];
+    S.state.extraPositions.forEach(function (pos, i) {
+      if (!pos.id) pos.id = "extra-" + (i + 1);
+      if (!pos.name) pos.name = "Position";
+      pos.m = num0(pos.m); pos.f = num0(pos.f);
+      if (!Array.isArray(pos.bands) || !pos.bands.length) pos.bands = defaultExtraBands();
+    });
+    return S.state.extraPositions;
+  };
+  S.readExtraPositionsFromDom = function () {
+    var list = S.ensureExtraPositions();
+    list.forEach(function (pos) {
+      var nameEl = document.querySelector('[data-extra-name="' + pos.id + '"]');
+      var mEl = document.querySelector('[data-extra-m="' + pos.id + '"]');
+      var fEl = document.querySelector('[data-extra-f="' + pos.id + '"]');
+      if (nameEl) pos.name = String(nameEl.value || pos.name).trim() || pos.name;
+      if (mEl) pos.m = num0(mEl.value);
+      if (fEl) pos.f = num0(fEl.value);
+      if (!Array.isArray(pos.bands)) pos.bands = defaultExtraBands();
+      for (var i = 0; i < pos.bands.length; i++) {
+        var b = pos.bands[i] || {};
+        ["start", "end", "min"].forEach(function (field) {
+          var el = document.querySelector('[data-extra-band="' + pos.id + '"][data-extra-bi="' + i + '"][data-extra-bf="' + field + '"]');
+          if (!el) return;
+          if (field === "min") b[field] = num0(el.value);
+          else b[field] = el.value || b[field];
+        });
+        pos.bands[i] = b;
+      }
+    });
+    return list;
+  };
+  S.renderExtraPositions = function () {
+    var host = S.$("extra-pos-list");
+    if (!host) return;
+    var list = S.ensureExtraPositions();
+    host.innerHTML = list.map(function (pos) {
+      var rows = (pos.bands || []).map(function (b, i) {
+        return "<tr>" +
+          '<td><input type="time" data-extra-band="' + pos.id + '" data-extra-bi="' + i + '" data-extra-bf="start" value="' + (b.start || "04:00") + '" step="900"></td>' +
+          '<td><input type="time" data-extra-band="' + pos.id + '" data-extra-bi="' + i + '" data-extra-bf="end" value="' + (b.end || "20:30") + '" step="900"></td>' +
+          '<td><input type="number" min="0" max="99" data-extra-band="' + pos.id + '" data-extra-bi="' + i + '" data-extra-bf="min" value="' + (b.min != null ? b.min : 0) + '" style="width:3.5rem"></td>' +
+          '<td><button type="button" class="btn btn-red btn-sm" data-extra-band-remove="' + pos.id + '" data-extra-bi="' + i + '">\u2715</button></td></tr>';
+      }).join("");
+      return '<div class="extra-pos-card" data-extra-card="' + pos.id + '">' +
+        '<div class="fte-sex-row extra-pos-head">' +
+        '<label>Name <input type="text" data-extra-name="' + pos.id + '" value="' + String(pos.name || "").replace(/"/g, "&quot;") + '" style="width:7rem"></label>' +
+        '<label>Male <input type="number" min="0" data-extra-m="' + pos.id + '" value="' + num0(pos.m) + '" style="width:4.5rem"></label>' +
+        '<label>Female <input type="number" min="0" data-extra-f="' + pos.id + '" value="' + num0(pos.f) + '" style="width:4.5rem"></label>' +
+        '<button type="button" class="btn btn-red btn-sm" data-extra-remove="' + pos.id + '">Remove</button>' +
+        '<button type="button" class="btn btn-sm" data-extra-add-band="' + pos.id + '">+ Band</button></div>' +
+        '<div class="lines-scroll extra-pos-bands"><table class="data-table"><thead><tr><th>Start</th><th>End</th><th>Min</th><th></th></tr></thead><tbody>' +
+        rows + "</tbody></table></div></div>";
+    }).join("");
+  };
+  S.addExtraPosition = function (name) {
+    S.readExtraPositionsFromDom();
+    var list = S.ensureExtraPositions();
+    list.push({ id: "extra-" + Date.now() + "-" + (list.length + 1), name: name || "MSTI", m: 0, f: 0, bands: defaultExtraBands() });
+    S.renderExtraPositions();
+  };
+  S.buildExtraPositionLines = function () {
+    var out = [];
+    var list = S.ensureExtraPositions();
+    var shifts = S.state.shifts || [];
+    var fallback = shifts[0] || { id: "", name: "Shift", start: "04:00", end: "20:30", paid: 8, rdoHard: [] };
+    list.forEach(function (pos, pi) {
+      var total = num0(pos.m) + num0(pos.f);
+      if (!total) return;
+      if (!pos.bands || !pos.bands.length) S.state.issues.push((pos.name || "Position") + ": no coverage bands.");
+      var idBase = 30000 + pi * 1000, made = 0;
+      function pushSex(sex, count) {
+        for (var i = 0; i < count; i++) {
+          var def = shifts[made % Math.max(1, shifts.length)] || fallback;
+          var workDays = (+def.paid || 8) >= 10 ? 4 : 5;
+          var rdoCount = 7 - workDays;
+          var hard = Array.isArray(def.rdoHard) ? def.rdoHard.map(Number).filter(function (x) { return x >= 0 && x <= 6; }) : [];
+          var rdoDays = hard.length ? hard.slice(0, rdoCount) : (S.consecutiveRdos ? S.consecutiveRdos(rdoCount, (idBase + made) % 7) : [0, 6]);
+          while (rdoDays.length < rdoCount) {
+            for (var d = 0; d < 7 && rdoDays.length < rdoCount; d++) if (rdoDays.indexOf(d) < 0) rdoDays.push(d);
+          }
+          out.push({
+            id: idBase + made + 1,
+            lineCode: String(pos.name || "POS") + " " + String(made + 1).padStart(2, "0"),
+            shiftId: def.id, shiftName: def.name,
+            shiftLabel: S.shiftLabel ? S.shiftLabel(def) : ((def.start || "") + "-" + (def.end || "")),
+            empClass: pos.name || "EXTRA", position: pos.name || "EXTRA",
+            isLtso: false, isStso: false, isExtra: true, extraPositionId: pos.id,
+            sex: sex, function: "", rdoDays: rdoDays, rdoHard: hard.length > 0, paid: def.paid || 8
+          });
+          made++;
+        }
+      }
+      pushSex("M", num0(pos.m));
+      pushSex("F", num0(pos.f));
+    });
+    return out;
+  };
+
   S.clearLineFunctions = function () {
     (S.state.lines || []).forEach(function (l) { l.function = ""; l.functionEligible = { dfo: false, bag: false, pax: false }; });
     S.state.functionRotation = {};
@@ -465,7 +581,9 @@ window.Scheduler = window.Scheduler || {};
     if (S._funcCoverageBound) return;
     S._funcCoverageBound = true;
     S.ensureFunctionCoverage();
+    S.ensureExtraPositions();
     S.fillFunctionCoverageForm();
+    S.renderExtraPositions();
     var openBtn = S.$("btn-open-func-coverage"); if (openBtn) openBtn.addEventListener("click", S.openFunctionCoverageModal);
     var closeBtn = S.$("func-coverage-close"); if (closeBtn) closeBtn.addEventListener("click", S.closeFunctionCoverageModal);
     var cancelBtn = S.$("fc-cancel"); if (cancelBtn) cancelBtn.addEventListener("click", S.closeFunctionCoverageModal);
@@ -475,31 +593,69 @@ window.Scheduler = window.Scheduler || {};
       if (S.updateStatus) S.updateStatus("Function coverage settings saved.");
     });
     var addBtn = S.$("fc-add-band");
-    if (addBtn) addBtn.addEventListener("click", function () {
-      S.readFunctionBandsFromDom();
-      S.ensureFunctionCoverage().bands.push({ start: "12:00", end: "16:00", stso: 0, ltso: 0, tso: 0 });
-      S.renderFunctionBandsTable(); S.updateFunctionCoveragePreview();
-    });
-    document.addEventListener("click", function (e) {
-      var t = e.target; if (!t || !t.getAttribute) return;
-      var rm = t.getAttribute("data-fc-remove"); if (rm == null) return;
-      S.readFunctionBandsFromDom();
-      var idx = +rm, bands = S.ensureFunctionCoverage().bands;
-      if (idx >= 0 && idx < bands.length) { bands.splice(idx, 1); S.renderFunctionBandsTable(); S.updateFunctionCoveragePreview(); }
-    });
-    document.addEventListener("change", function (e) {
-      var t = e.target; if (!t) return;
-      if (t.id === "fc-mode-dfo" || t.id === "fc-mode-bag") {
-        var fc = S.ensureFunctionCoverage();
-        if (t.id === "fc-mode-dfo" && t.checked) { fc.mode = "dfo"; setChk("fc-mode-bag", false); }
-        else if (t.id === "fc-mode-bag" && t.checked) { fc.mode = "bag"; setChk("fc-mode-dfo", false); }
-        else fc.mode = "none";
-        S.syncFunctionModeUi(); S.updateFunctionCoveragePreview();
-        return;
-      }
-      if ((t.getAttribute && t.getAttribute("data-fc-band") != null) || (t.id && t.id.indexOf("fc-") === 0)) {
-        S.readFunctionBandsFromDom(); S.updateFunctionCoveragePreview();
-      }
-    });
+    if (addBtn && !addBtn._fcBound) {
+      addBtn._fcBound = true;
+      addBtn.addEventListener("click", function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        S.readFunctionBandsFromDom();
+        S.ensureFunctionCoverage().bands.push({ start: "12:00", end: "16:00", stso: 0, ltso: 0, tso: 0 });
+        S.renderFunctionBandsTable(); S.updateFunctionCoveragePreview();
+      });
+    }
+    if (!S._funcDocBound) {
+      S._funcDocBound = true;
+      document.addEventListener("click", function (e) {
+        var t = e.target; if (!t || !t.getAttribute) return;
+        var rm = t.getAttribute("data-fc-remove"); if (rm == null) return;
+        S.readFunctionBandsFromDom();
+        var idx = +rm, bands = S.ensureFunctionCoverage().bands;
+        if (idx >= 0 && idx < bands.length) { bands.splice(idx, 1); S.renderFunctionBandsTable(); S.updateFunctionCoveragePreview(); }
+      });
+      document.addEventListener("change", function (e) {
+        var t = e.target; if (!t) return;
+        if ((t.getAttribute && t.getAttribute("data-fc-band") != null) || (t.id && t.id.indexOf("fc-") === 0)) {
+          S.readFunctionBandsFromDom(); S.updateFunctionCoveragePreview();
+        }
+      });
+    }
+
+    var addPos = S.$("btn-add-position");
+    if (addPos && !addPos._extraBound) {
+      addPos._extraBound = true;
+      addPos.addEventListener("click", function (e) { e.preventDefault(); S.addExtraPosition("MSTI"); });
+    }
+    if (!S._extraDocBound) {
+      S._extraDocBound = true;
+      document.addEventListener("click", function (e) {
+        var t = e.target; if (!t || !t.getAttribute) return;
+        var rid = t.getAttribute("data-extra-remove");
+        if (rid) {
+          S.readExtraPositionsFromDom();
+          S.state.extraPositions = S.ensureExtraPositions().filter(function (pos) { return pos.id !== rid; });
+          S.renderExtraPositions();
+          return;
+        }
+        var addB = t.getAttribute("data-extra-add-band");
+        if (addB) {
+          S.readExtraPositionsFromDom();
+          var pos = S.ensureExtraPositions().filter(function (x) { return x.id === addB; })[0];
+          if (pos) { if (!pos.bands) pos.bands = []; pos.bands.push({ start: "12:00", end: "16:00", min: 0 }); S.renderExtraPositions(); }
+          return;
+        }
+        var rmB = t.getAttribute("data-extra-band-remove");
+        if (rmB) {
+          S.readExtraPositionsFromDom();
+          var pos2 = S.ensureExtraPositions().filter(function (x) { return x.id === rmB; })[0];
+          var bi = +t.getAttribute("data-extra-bi");
+          if (pos2 && pos2.bands && bi >= 0 && bi < pos2.bands.length) { pos2.bands.splice(bi, 1); S.renderExtraPositions(); }
+        }
+      });
+        document.addEventListener("change", function (e) {
+        var t = e.target;
+        if (t && t.getAttribute && (t.getAttribute("data-extra-name") || t.getAttribute("data-extra-m") || t.getAttribute("data-extra-f") || t.getAttribute("data-extra-band"))) {
+          S.readExtraPositionsFromDom();
+        }
+      });
+    }
   };
 })(window.Scheduler);

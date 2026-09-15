@@ -100,7 +100,9 @@ window.Scheduler = window.Scheduler || {};
       var stsoAlloc = S.allocateSupervisoryHeadcounts(stsoTotal, openMin, closeMin, "stsoForce", tsoLines);
       stsoLines = S.buildSupervisoryLines(stsoAlloc.counts || {}, "STSO");
     }
-    S.state.lines = [].concat(tsoLines, ltsoLines, stsoLines);
+    if (S.readExtraPositionsFromDom) S.readExtraPositionsFromDom();
+    var extraLines = S.buildExtraPositionLines ? S.buildExtraPositionLines() : [];
+    S.state.lines = [].concat(tsoLines, ltsoLines, stsoLines, extraLines);
 
     var days = S.state.weekCount * 7;
     S.state.schedule = {};
@@ -110,14 +112,14 @@ window.Scheduler = window.Scheduler || {};
 
     if (S.readFunctionBandsFromDom) S.readFunctionBandsFromDom();
     var fcMode = S.getFunctionMode ? S.getFunctionMode() : "none";
-    if (fcMode && fcMode !== "none" && S.generateFunctionAssignments) {
+    if (S.generateFunctionAssignments) {
       S.generateFunctionAssignments({ fromGenerate: true });
     } else if (S.clearLineFunctions) {
       S.clearLineFunctions();
     }
 
     var dayTotals = [];
-    var workingLines = S.state.lines.filter(function (l) { return !l.isLtso && !l.isStso; });
+    var workingLines = S.state.lines.filter(function (l) { return !l.isLtso && !l.isStso && !l.isExtra; });
     for (var d = 0; d < Math.min(7, days); d++) {
       dayTotals.push(workingLines.filter(function (l) {
         return S.state.schedule[l.id][d] === "WORK";
@@ -131,7 +133,7 @@ window.Scheduler = window.Scheduler || {};
     S.renderAll();
     if (S.renderCoverageBars) S.renderCoverageBars();
     if (S.__USE_SVELTE_LINES) {
-      document.dispatchEvent(new CustomEvent("lines:request-render"));
+      window.dispatchEvent(new CustomEvent("lines:request-render"));
     } else if (S.renderLines) S.renderLines();
     S.updateStatus(
       "Scheduled " + S.state.lines.length + " lines (FT " + S.state.ftM + "/" + S.state.ftF +
@@ -139,7 +141,7 @@ window.Scheduler = window.Scheduler || {};
       " · LTSO " + S.state.ltsoM + "/" + S.state.ltsoF +
       " · STSO " + S.state.stsoM + "/" + S.state.stsoF +
       ") · " + mode + " · " + S.state.weekCount + " wk" +
-      (fcMode && fcMode !== "none" ? " · " + fcMode.toUpperCase() + " duties" : "") +
+      (fcMode && fcMode !== "none" ? " · " + String(fcMode).toUpperCase() + " duties" : "") +
       (S.state.issues.length ? " · " + S.state.issues.length + " note(s)" : "")
     );
   };
