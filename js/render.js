@@ -292,7 +292,7 @@ window.Scheduler = window.Scheduler || {};
           '<option value="' + sh.id + '"' +
           (String(S.linesView.filterShift) === String(sh.id) ? " selected" : "") +
           ">" +
-          String(sh.name || sh.id).replace(/</g, "<") +
+          String(sh.name || sh.id).replace(/</g, "&lt;") +
           "</option>";
       });
       fsEl.innerHTML = shiftHtml;
@@ -302,14 +302,14 @@ window.Scheduler = window.Scheduler || {};
         '<option value="">All</option>' +
         '<option value="__none__"' +
         (S.linesView.filterTeam === "__none__" ? " selected" : "") +
-        ">Unassigned</option>';
+        ">Unassigned</option>";
       if (S.teams && S.teams.teams) {
         S.teams.teams.forEach(function (t) {
           teamHtml +=
             '<option value="' + t.id + '"' +
             (S.linesView.filterTeam === t.id ? " selected" : "") +
             ">" +
-            String(t.name || t.id).replace(/</g, "<") +
+            String(t.name || t.id).replace(/</g, "&lt;") +
             "</option>";
         });
       }
@@ -332,14 +332,14 @@ window.Scheduler = window.Scheduler || {};
     var sortedLines = S.sortLinesForView(S.filterLinesForView(S.state.lines));
 
     function teamSelectHtml(selectedId) {
-      var opts = '<option value=""' + (!selectedId ? " selected" : "") + ">—</option>';
+      var opts = '<option value=""' + (!selectedId ? " selected" : "") + ">—</option>";
       if (S.teams && S.teams.teams) {
         S.teams.teams.forEach(function (t) {
           opts +=
             '<option value="' + t.id + '"' +
             (t.id === selectedId ? " selected" : "") +
             ">" +
-            String(t.name || t.id).replace(/</g, "<") +
+            String(t.name || t.id).replace(/</g, "&lt;") +
             "</option>";
         });
       }
@@ -352,7 +352,7 @@ window.Scheduler = window.Scheduler || {};
             '<option value="' + sh.id + '"' +
             (sh.id === selectedId ? " selected" : "") +
             ">" +
-            String(sh.name || sh.id).replace(/</g, "<") +
+            String(sh.name || sh.id).replace(/</g, "&lt;") +
             " (" + sh.start + "–" + sh.end + ")</option>"
           );
         })
@@ -442,7 +442,7 @@ window.Scheduler = window.Scheduler || {};
         '<td><input type="text" class="line-edit line-code-input" data-field="lineCode" data-line-id="' +
         line.id +
         '" value="' +
-        String(line.lineCode || "").replace(/"/g, """) +
+        String(line.lineCode || "").replace(/"/g, "&quot;") +
         '"></td>' +
         '<td><select class="line-edit" data-field="shift" data-line-id="' + line.id + '">' +
         shiftSelectHtml(line.shiftId) +
@@ -451,14 +451,14 @@ window.Scheduler = window.Scheduler || {};
         empSelectHtml(empVal) +
         "</select></td>" +
         '<td><select class="line-edit" data-field="sex" data-line-id="' + line.id + '">' +
-        '<option value="M"' + (line.sex === "M" ? " selected" : "") + ">M</option>' +
-        '<option value="F"' + (line.sex === "F" ? " selected" : "") + ">F</option>' +
+        '<option value="M"' + (line.sex === "M" ? " selected" : "") + ">M</option>" +
+        '<option value="F"' + (line.sex === "F" ? " selected" : "") + ">F</option>" +
         "</select></td>" +
         '<td><select class="line-edit" data-field="function" data-line-id="' + line.id + '">' +
-        '<option value=""' + (!line.function ? " selected" : "") + ">—</option>' +
-        '<option value="DFO"' + (line.function === "DFO" ? " selected" : "") + ">DFO</option>' +
-        '<option value="PAX"' + (line.function === "PAX" ? " selected" : "") + ">PAX</option>' +
-        '<option value="BAG"' + (line.function === "BAG" ? " selected" : "") + ">BAG</option>' +
+        '<option value=""' + (!line.function ? " selected" : "") + ">—</option>" +
+        '<option value="DFO"' + (line.function === "DFO" ? " selected" : "") + ">DFO</option>" +
+        '<option value="PAX"' + (line.function === "PAX" ? " selected" : "") + ">PAX</option>" +
+        '<option value="BAG"' + (line.function === "BAG" ? " selected" : "") + ">BAG</option>" +
         "</select></td>" +
         '<td class="muted line-rdo-cell" data-line-id="' + line.id + '">' + rdoTxt + "</td>" +
         cells +
