@@ -11,6 +11,37 @@ export function initFunctionCoverage(scheduler) {
   bindDutyApi(scheduler);
   bindPoolsApi(scheduler);
   bindBandsApi(scheduler);
+  bindAssignApi(scheduler);
+  scheduler.fteCapsByRoleSex = fteCapsByRoleSex;
+  scheduler.ensureFunctionCoverage = ensureFunctionCoverage;
+  scheduler.getFunctionMode = getFunctionMode;
+  scheduler.syncFunctionModeUi = syncFunctionModeUi;
+  scheduler.fillFunctionCoverageForm = fillFunctionCoverageForm;
+  scheduler.computeShiftAnchors = computeShiftAnchors;
+  scheduler.phaseOfStart = phaseOfStart;
+  scheduler.isAmSide = isAmSide;
+  scheduler.lineStartMin = lineStartMin;
+  scheduler.lineRoleKey = lineRoleKey;
+  scheduler.isOpsFunctionRole = isOpsFunctionRole;
+  scheduler.lineIsDfoTagged = lineIsDfoTagged;
+  scheduler.getRotationDuty = getRotationDuty;
+  scheduler.lineCoversSlot = lineCoversSlot;
+  scheduler.bandForMinute = bandForMinute;
+  scheduler.openFunctionCoverageModal = openFunctionCoverageModal;
+  scheduler.closeFunctionCoverageModal = closeFunctionCoverageModal;
+  scheduler.renderFunctionBandsTable = renderFunctionBandsTable;
+  scheduler.readFunctionBandsFromDom = readFunctionBandsFromDom;
+  scheduler.updateFunctionCoveragePreview = updateFunctionCoveragePreview;
+  scheduler.capFunctionPoolsToFte = capFunctionPoolsToFte;
+  scheduler.buildCertifiedPools = buildCertifiedPools;
+  scheduler.generateFunctionAssignments = generateFunctionAssignments;
+  scheduler.ensureExtraPositions = ensureExtraPositions;
+  scheduler.readExtraPositionsFromDom = readExtraPositionsFromDom;
+  scheduler.renderExtraPositions = renderExtraPositions;
+  scheduler.addExtraPosition = addExtraPosition;
+  scheduler.buildExtraPositionLines = buildExtraPositionLines;
+  scheduler.clearLineFunctions = clearLineFunctions;
+  scheduler.initFunctionCoverage = initFunctionCoverage;
   return scheduler;
 }
 
@@ -58,6 +89,17 @@ export {
   addExtraPosition,
   buildExtraPositionLines,
 } from "./lib/bands.js";
+
+// Bare named re-exports from lib/assign.js
+export {
+  bindAssignApi,
+  generateFunctionAssignments,
+  markDfo,
+  markBag,
+  fillBandShortfalls,
+  bagSlotCounts,
+  worstBagCoverage,
+} from "./lib/assign.js";
 
 // Named re-exports of all lib modules for future wiring
 export { pools, bands, assign };
