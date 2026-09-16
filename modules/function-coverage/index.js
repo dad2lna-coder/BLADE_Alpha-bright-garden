@@ -7,7 +7,33 @@ import * as bands from "./lib/bands.js";
 import * as duty from "./lib/duty.js";
 import * as assign from "./lib/assign.js";
 
+import {
+  bindDutyApi, lineRoleKey, isOpsFunctionRole, lineIsDfoTagged, getRotationDuty,
+  lineStartMin, phaseOfStart, isAmSide, computeShiftAnchors, lineCoversSlot,
+  bandForMinute, clearLineFunctions
+} from "./lib/duty.js";
+
+import {
+  bindPoolsApi, ensureFunctionCoverage, getFunctionMode, fteCapsByRoleSex,
+  capFunctionPoolsToFte, buildCertifiedPools, bagPoolTotal, dfoPoolTotal
+} from "./lib/pools.js";
+
+import {
+  bindBandsApi, syncFunctionModeUi, fillFunctionCoverageForm,
+  openFunctionCoverageModal, closeFunctionCoverageModal, renderFunctionBandsTable,
+  readFunctionBandsFromDom, updateFunctionCoveragePreview, ensureExtraPositions,
+  readExtraPositionsFromDom, renderExtraPositions, addExtraPosition,
+  buildExtraPositionLines, bindFunctionCoverageUi
+} from "./lib/bands.js";
+
+import {
+  bindAssignApi, generateFunctionAssignments, markDfo, markBag,
+  fillBandShortfalls, bagSlotCounts, worstBagCoverage
+} from "./lib/assign.js";
+
 export function initFunctionCoverage(scheduler) {
+  scheduler = scheduler || (typeof window !== "undefined" ? window.Scheduler : null);
+  if (!scheduler) return null;
   bindDutyApi(scheduler);
   bindPoolsApi(scheduler);
   bindBandsApi(scheduler);
@@ -42,10 +68,10 @@ export function initFunctionCoverage(scheduler) {
   scheduler.buildExtraPositionLines = buildExtraPositionLines;
   scheduler.clearLineFunctions = clearLineFunctions;
   scheduler.initFunctionCoverage = initFunctionCoverage;
+  bindFunctionCoverageUi();
   return scheduler;
 }
 
-// Re-export all duty module functions (real implementations + bindDutyApi)
 export {
   bindDutyApi,
   lineRoleKey,
@@ -61,7 +87,6 @@ export {
   clearLineFunctions,
 } from "./lib/duty.js";
 
-// Re-export all pools module functions (real implementations + bindPoolsApi)
 export {
   bindPoolsApi,
   ensureFunctionCoverage,
@@ -73,7 +98,6 @@ export {
   dfoPoolTotal,
 } from "./lib/pools.js";
 
-// Bare named re-exports from lib/bands.js (same style as duty/pools)
 export {
   bindBandsApi,
   syncFunctionModeUi,
@@ -88,9 +112,9 @@ export {
   renderExtraPositions,
   addExtraPosition,
   buildExtraPositionLines,
+  bindFunctionCoverageUi,
 } from "./lib/bands.js";
 
-// Bare named re-exports from lib/assign.js
 export {
   bindAssignApi,
   generateFunctionAssignments,
@@ -101,5 +125,4 @@ export {
   worstBagCoverage,
 } from "./lib/assign.js";
 
-// Named re-exports of all lib modules for future wiring
 export { pools, bands, assign };
