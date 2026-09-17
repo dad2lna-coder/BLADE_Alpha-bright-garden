@@ -1,33 +1,10 @@
 <script>
-  import { createVirtualizer } from '@tanstack/svelte-virtual';
-  import { onMount } from 'svelte';
-
   export let rows = [];
   export let mode = 'svelte'; // 'svelte' | 'classic'
   export let shiftOptions = [];
   export let teamOptions = [];
   export let onInlineEdit = null;
   export let onDayToggle = null;
-
-  let virtualRoot;
-  let virtualizer;
-  let rowHeight = 42; // Match CSS for .lines-editable td height
-
-  onMount(() => {
-    if (mode !== 'svelte') return;
-
-    virtualizer = createVirtualizer({
-      count: rows.length,
-      getScrollElement: () => virtualRoot,
-      estimateSize: () => rowHeight,
-      overscan: 5,
-      getItemKey: (index) => rows[index]?.id ?? index,
-    });
-  });
-
-  $: if (virtualizer && mode === 'svelte') {
-    virtualizer.setOptions({ count: rows.length });
-  }
 
   function shiftLabel(opt) {
     if (!opt) return '';
@@ -37,12 +14,11 @@
     return name;
   }
 
-  function dayClass(text, fn) {
+  function dayClass(text) {
     const t = String(text || '').toUpperCase();
     if (t === 'RDO' || t === '—') return 'cell-toggle cell-rdo';
-    if (fn === 'BAG') return 'cell-toggle cell-function-duty cell-bag';
-    if (fn === 'DFO') return 'cell-toggle cell-function-duty cell-dfo';
-    if (fn === 'PAX') return 'cell-toggle cell-function-duty cell-pax';
+    if (t === 'BAG') return 'cell-toggle cell-function-duty cell-bag';
+    if (t === 'PAX') return 'cell-toggle cell-function-duty cell-pax';
     return 'cell-toggle cell-work';
   }
 
@@ -55,13 +31,9 @@
   }
 </script>
 
-<div class="lines-table-root">
+<div class="lines-table-root" style="min-height: min(70vh, 720px); height: min(70vh, 720px); width: 100%;">
   {#if mode === 'svelte'}
-    <div
-      class="lines-virtual-root"
-      bind:this={virtualRoot}
-      style="height: 100%; overflow: auto; position: relative;"
-    >
+    <div class="lines-virtual-root" style="height: 100%; overflow: auto; position: relative;">
       <table class="data-table lines-editable" style="width: max-content; min-width: 1100px;">
         <thead>
           <tr>
@@ -86,13 +58,9 @@
             <th>Hours</th>
           </tr>
         </thead>
-        <tbody style="position: relative; height: 0;">
-          {#each virtualizer?.getVirtualItems() ?? [] as virtualRow}
-            {@const row = rows[virtualRow.index]}
-            <tr
-              style="position: absolute; top: {virtualRow.start}px; left: 0; width: 100%; height: {virtualRow.size}px;"
-              data-line-row={row?.id}
-            >
+        <tbody>
+          {#each rows as row (row.id)}
+            <tr data-line-row={row?.id}>
               <td>
                 <select class="line-edit" data-field="team" data-line-id={row?.id} value={row?.teamId ?? ''} on:change={(e) => emitEdit(row?.id, 'team', e.target.value)}>
                   <option value="">—</option>
@@ -149,15 +117,16 @@
               <td class="line-rdo-cell">{row?.rdos ?? '—'}</td>
               <td>{row?.paid ?? ''}</td>
               {#each [0, 1, 2, 3, 4, 5, 6] as i}
-                <td class={dayClass(row?.days?.[i], row?.function)} data-line-id={row?.id} data-day-index={i} on:click={() => emitDay(row?.id, i)}>
+                <td class={dayClass(row?.dayDuties?.[i] ?? row?.days?.[i])} data-line-id={row?.id} data-day-index={i} on:click={() => emitDay(row?.id, i)}>
                   {row?.days?.[i] ?? ''}
                 </td>
               {/each}
               <td class="line-hours">{row?.hours ?? ''}</td>
             </tr>
+          {:else}
+            <tr><td colspan="19" class="muted">No lines — Generate or Import first.</td></tr>
           {/each}
         </tbody>
-        <div style="height: {(virtualizer?.getTotalSize() ?? 0)}px;"></div>
       </table>
     </div>
   {:else}
@@ -166,9 +135,15 @@
 </div>
 
 <style>
-  .lines-table-root { width: 100%; overflow-x: auto; position: relative; }
+  .lines-table-root {
+    width: 100%;
+    min-height: min(70vh, 720px);
+    height: min(70vh, 720px);
+    overflow-x: auto;
+    position: relative;
+  }
   .lines-virtual-root { position: relative; overflow: auto; height: 100%; width: 100%; }
-  .lines-virtual-root table { width: max-content; min-width: 1100px; border-collapse: collapse; font-size: 0.78rem; table-layout: fixed; position: relative; }
+  .lines-virtual-root table { width: max-content; min-width: 1100px; border-collapse: collapse; font-size: 0.78rem; table-layout: fixed; }
   .lines-virtual-root th { position: sticky; top: 0; background: var(--console-bg, #0c0c0c); color: var(--console-fg, #e8e8e8); font-weight: 600; text-align: left; padding: 0.35rem 0.5rem; border-bottom: 2px solid #333; white-space: nowrap; z-index: 1; }
   .lines-virtual-root td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 3.5rem; height: 42px; line-height: 1.2; }
   .lines-virtual-root .line-edit { max-width: none; min-width: 5.5rem; height: 2.25rem; font-size: 0.85rem; }
@@ -185,4 +160,5 @@
   .lines-virtual-root .line-rdo-cell { white-space: nowrap; font-size: 0.8rem; cursor: pointer; }
   .lines-virtual-root .line-hours { font-weight: bold; color: var(--amber); }
   .lines-virtual-root .lines-group-row td { background: var(--panel2); color: var(--amber); font-weight: 600; border-top: 2px solid var(--border); }
+  .lines-virtual-root .muted { color: var(--muted, #888); font-style: italic; }
 </style>

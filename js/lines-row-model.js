@@ -21,6 +21,18 @@ window.Scheduler = window.Scheduler || {};
     return text;
   }
 
+  function resolveWorkDayText(line, duty, workLabel) {
+    if (workLabel) return workLabel;
+    return "WORK";
+  }
+
+  function resolveWorkDayDuty(line, duty) {
+    if (duty === "BAG" || duty === "PAX") return duty;
+    if (line.function === "BAG") return "BAG";
+    if (line.function === "DFO" || line.function === "PAX") return "PAX";
+    return duty === "BAG" || duty === "PAX" ? duty : null;
+  }
+
   S.lineToRowModel = function (line, schedule, options) {
     options = options || {};
     if (!line || !schedule) return null;
@@ -40,6 +52,7 @@ window.Scheduler = window.Scheduler || {};
     var rowSchedule = Array.isArray(schedule) ? schedule :
       schedule[line.id] || (schedule[String(line.id)] || []);
     var days = [];
+    var dayDuties = [];
     var hours = 0;
 
     for (var day = 0; day < 7; day++) {
@@ -49,11 +62,12 @@ window.Scheduler = window.Scheduler || {};
         var duty = typeof options.rotationDutyResolver === "function"
           ? options.rotationDutyResolver(line.id, day)
           : null;
-        days.push(duty || line.function === "BAG" || line.function === "DFO" || line.function === "PAX"
-          ? duty || line.function
-          : workLabel);
+        var text = resolveWorkDayText(line, duty, workLabel);
+        days.push(text);
+        dayDuties.push(resolveWorkDayDuty(line, duty));
       } else {
         days.push("RDO");
+        dayDuties.push("RDO");
       }
     }
 
@@ -73,6 +87,7 @@ window.Scheduler = window.Scheduler || {};
       rdos: rdoText(line, dayNames),
       paid: paid,
       days: days,
+      dayDuties: dayDuties,
       hours: hours
     };
   };
@@ -93,6 +108,9 @@ window.Scheduler = window.Scheduler || {};
     }
     if (!merged.shiftResolver && typeof S.getShift === "function") {
       merged.shiftResolver = S.getShift;
+    }
+    if (!merged.rotationDutyResolver && typeof S.getRotationDuty === "function") {
+      merged.rotationDutyResolver = S.getRotationDuty;
     }
     return S.getRowModels(lines, schedule, merged);
   };
