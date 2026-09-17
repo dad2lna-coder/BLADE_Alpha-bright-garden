@@ -33,10 +33,13 @@ export function initLinesTable(scheduler) {
 
   function getRotationDutyLocal(lineId, dayIndex) {
     const key = String(lineId);
-    const rot = S.state && S.state.functionRotation && S.state.functionRotation[key];
-    if (!Array.isArray(rot)) return null;
-    const duty = rot[dayIndex];
-    return duty === "BAG" || duty === "PAX" ? duty : null;
+    const rot = S.state && S.state.functionRotation;
+    const arr = rot && (rot[key] || rot[lineId]);
+    if (!Array.isArray(arr)) return null;
+    const duty = arr[dayIndex];
+    if (duty === "BAG") return "BAG";
+    if (duty === "PAX" || duty === "DFO") return "PAX";
+    return null;
   }
 
   function setRotationDuty(lineId, dayIndex, duty) {
@@ -119,10 +122,16 @@ export function initLinesTable(scheduler) {
     const line = S.findLineById ? S.findLineById(detail.lineId) : null;
     const dayIndex = Number(detail.dayIndex);
     if (!line || !Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return;
-    const key = line.id;
+    const key = String(line.id);
     if (!S.state.schedule) S.state.schedule = {};
-    if (!S.state.schedule[key]) S.state.schedule[key] = [];
+    var existing = S.state.schedule[key] || S.state.schedule[line.id];
+    if (!Array.isArray(existing)) existing = [];
+    S.state.schedule[key] = existing;
+    while (S.state.schedule[key].length < 7) S.state.schedule[key].push("RDO");
     if (!S.state.functionRotation) S.state.functionRotation = {};
+    if (!S.state.functionRotation[key] && S.state.functionRotation[line.id]) {
+      S.state.functionRotation[key] = S.state.functionRotation[line.id];
+    }
 
     const cur = S.state.schedule[key][dayIndex] || "RDO";
     const bagIdentity = line.function === "BAG";
@@ -141,13 +150,13 @@ export function initLinesTable(scheduler) {
       S.state.schedule[key][dayIndex] = "RDO";
       setRotationDuty(key, dayIndex, null);
     } else if (dfo) {
-      const duty = (typeof S.getRotationDuty === "function"
+      var rawDuty = (typeof S.getRotationDuty === "function"
         ? S.getRotationDuty(line.id, dayIndex)
-        : getRotationDutyLocal(line.id, dayIndex)) || "PAX";
-      if (duty === "PAX" || !duty) {
+        : getRotationDutyLocal(line.id, dayIndex));
+      var duty = rawDuty === "DFO" || rawDuty === "PAX" || !rawDuty ? "PAX" : rawDuty;
+      if (duty === "PAX") {
         setRotationDuty(key, dayIndex, "BAG");
       } else {
-        // BAG → RDO (locked v1: RDO → WORK+PAX → WORK+BAG → RDO)
         S.state.schedule[key][dayIndex] = "RDO";
         setRotationDuty(key, dayIndex, null);
       }
