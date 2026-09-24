@@ -5,46 +5,29 @@ window.Scheduler = window.Scheduler || {};
 
   if (!S.switchTab) {
     S.switchTab = function (name) {
-      document.querySelectorAll(".tab-btn").forEach(function (b) {
+      document.querySelectorAll("#blade-tabs .tab-btn").forEach(function (b) {
         b.classList.toggle("active", b.dataset.tab === name);
       });
-      document.querySelectorAll(".panel").forEach(function (p) {
+      document.querySelectorAll("#blade-panels > .panel").forEach(function (p) {
         p.classList.toggle("active", p.id === "tab-" + name);
       });
     };
   }
   if (!S.renderAll) S.renderAll = function () {};
 
-  function bindClick(id, fn) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener("click", fn);
-  }
-
   function init() {
-    document.querySelectorAll(".tab-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        if (S.switchTab) S.switchTab(btn.dataset.tab);
-      });
+    document.addEventListener("click", function (e) {
+      var sub = e.target && e.target.closest ? e.target.closest(".report-sub-btn") : null;
+      if (sub && sub.dataset.subtab && S.switchReportSub) {
+        S.switchReportSub(sub.dataset.subtab);
+        return;
+      }
+      var btn = e.target && e.target.closest ? e.target.closest("#blade-tabs .tab-btn") : null;
+      if (btn && btn.dataset.tab && S.switchTab) S.switchTab(btn.dataset.tab);
     });
 
-    bindClick("btn-generate", function () { if (S.generate) S.generate(); });
-    bindClick("btn-export", function () { if (S.exportJson) S.exportJson(); });
-    bindClick("btn-import", function () {
-      var fileInput = document.getElementById("file-import");
-      if (fileInput) { fileInput.value = ""; fileInput.click(); }
-    });
-    var fileImport = document.getElementById("file-import");
-    if (fileImport) {
-      fileImport.addEventListener("change", function (event) {
-        var file = event.target.files && event.target.files[0];
-        if (S.importJsonFile) S.importJsonFile(file);
-      });
-    }
-    bindClick("btn-clear", function () { if (S.clearAll) S.clearAll(); });
-    bindClick("btn-export-lines-excel", function () {
-      if (S.exportLinesExcel) S.exportLinesExcel();
-    });
+    // GEN/EXP/IMP/CLR + #file-import bind after Setup panel mount
+    // (modules/setup-panel bindSetupActions). Header only keeps HLP.
 
     var modal = document.getElementById("instructions-modal");
     var btn = document.getElementById("btn-instructions");
@@ -64,7 +47,7 @@ window.Scheduler = window.Scheduler || {};
       });
     }
 
-    if (S.updateStatus) S.updateStatus("BLADE Alpha Build — boot 20260923e");
+    if (S.updateStatus) S.updateStatus("BLADE Alpha Build — boot 20260924b");
     if (S.renderAll) S.renderAll();
   }
 

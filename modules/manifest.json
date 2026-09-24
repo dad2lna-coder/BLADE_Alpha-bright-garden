@@ -19,7 +19,11 @@
     ],
     "panel": "modules/team-builder/panel.html",
     "docks": "modules/team-builder/docks.html",
-    "mount": "#tab-teams"
+    "mount": "#tab-teams",
+    "tab": { "id": "teams", "label": "TEAMS", "priority": 3, "order": 1 },
+    "reportsSubTab": { "id": "cohesion", "label": "Team Cohesion", "order": 3 },
+    "reportsPanel": "modules/reports/cohesion.html",
+    "reportsMount": "#report-sub-cohesion"
   },
   "function-coverage": {
     "entry": "modules/function-coverage/index.js",
@@ -32,12 +36,16 @@
       "modules/setup-panel/styles/setup-panel.css"
     ],
     "panel": "modules/setup-panel/panel.html",
-    "mount": "#tab-setup"
+    "mount": "#tab-setup",
+    "tab": { "id": "setup", "label": "SETUP", "priority": 1, "order": 1 }
   },
   "lines-table": {
     "entry": "modules/lines-table/dist/lines-table.js",
     "init": "initLinesTable",
-    "css": ["modules/lines-table/dist/lines-table.css"]
+    "css": ["modules/lines-table/dist/lines-table.css"],
+    "panel": "modules/lines-table/panel.html",
+    "mount": "#tab-lines",
+    "tab": { "id": "lines", "label": "LINES", "priority": 1, "order": 2 }
   },
   "coverage": {
     "entry": "modules/coverage/index.js",
@@ -46,7 +54,8 @@
       "modules/coverage/styles/coverage.css"
     ],
     "panel": "modules/coverage/panel.html",
-    "mount": "#tab-coverage"
+    "mount": "#tab-coverage",
+    "tab": { "id": "coverage", "label": "COVERAGE", "priority": 1, "order": 3 }
   },
   "demand-capacity": {
     "entry": "modules/demand-capacity/index.js",
@@ -55,6 +64,18 @@
       "modules/demand-capacity/styles/demand-capacity.css"
     ],
     "panel": "modules/demand-capacity/panel.html",
-    "mount": "#tab-demand-capacity"
+    "mount": "#report-sub-demand",
+    "reportsSubTab": { "id": "demand", "label": "Demand", "order": 2 }
+  },
+  "reports": {
+    "entry": "modules/reports/index.js",
+    "init": "initReportsShell",
+    "css": [
+      "modules/reports/styles/reports.css"
+    ],
+    "tab": { "id": "reports", "label": "REPORTS", "priority": 2, "order": 1 },
+    "reportsSubTab": { "id": "management", "label": "Management Reports", "order": 1 },
+    "reportsPanel": "modules/reports/management.html",
+    "reportsMount": "#report-sub-management"
   }
 }
